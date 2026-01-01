@@ -8,6 +8,7 @@ Authors
 
 import re
 import ast
+import sys
 import yaml
 import copy
 import pydoc
@@ -715,9 +716,18 @@ def _ast_eval(node):
         ast.Pow: op.pow,
         ast.Mod: op.mod,
     }
-    if isinstance(node, ast.Num):  # <number>
-        return node.n
-    elif isinstance(node, ast.BinOp):  # <left> <operator> <right>
+
+    # Compatibility check for Python versions
+    # In Python 3.8, ast.Num was deprecated and replaced by ast.Constant.
+    if sys.version_info >= (3, 8): 
+        if isinstance(node, ast.Constant):  # <number>, <string>, <bool>, <None>
+            return node.value
+    else:
+        # For Python versions older than 3.8
+        if isinstance(node, ast.Num):  # <number>
+            return node.n
+
+    if isinstance(node, ast.BinOp):  # <left> <operator> <right>
         return ops[type(node.op)](_ast_eval(node.left), _ast_eval(node.right))
     elif isinstance(node, ast.UnaryOp):  # <operator> <operand> e.g., -1
         return ops[type(node.op)](_ast_eval(node.operand))
